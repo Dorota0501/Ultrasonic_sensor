@@ -20,7 +20,7 @@ volatile uint8_t jestPomiar = 0;	//nastąpiło zbocze narastające,
 //-------------------------------------------------------------
 void pin_init() {
 	DDRB |= (1 << trigger) | (1 << dioda);
-	PORTB &= (0 << dioda);							//wyłącz diode
+	PORTB |= (1 << dioda);							//wyłącz diode
 
 	// UART
 	DDRD |= (1 << txd) | (0 << rxd) | (0 << echo);	//rxd- 0, txd- 1, int0-0
@@ -44,13 +44,13 @@ void timer1_config() {
 
 void make_measure() {
 	// -----------------------------URUCAMIAN CZUJNIK-----------------
-	PORTB = (PORTB & 0b0100);
+	PORTB &= ~0b0110;	// załączenie led, trig = 0
 	_delay_us(5);
 
-	PORTB = (PORTB & 0b0110); //trigger czujnika musi być ustawiony na 10us na 5V
+	PORTB |= 0b0010; //trigger czujnika musi być ustawiony na 10us na 5V
 	_delay_us(10);
 
-	PORTB = (PORTB & 0b0100);
+	PORTB &= ~0b0010;
 }
 
 void show_timer_counter() {
@@ -72,9 +72,10 @@ int main() {
 	_delay_ms(100);
 	timer1_config();
 	sei();
-
+	 make_measure();
 	//jezeli ktoras z flag wystapi wyswitlam komunikat,
 	//timeout albo wynik pomiaru i zaczynam nowy pomiar
+
 
 	while (1) {
 
@@ -104,26 +105,22 @@ ISR(INT0_vect) {					//zmieniony został stan naa pinie echo
 	//----------------------rozpoczęcie pomiaru---------------
 	if (current_state == 0x04) {
 		TCNT1 = 0;					//zeruj licznik
-		PORTB &= (0 << dioda);		//włącz diode na czas pomiaaru
+		PORTB &= ~(1 << dioda);		//włącz diode na czas pomiaaru
 	}
 
 	//----------------------zakończenie pomiaru---------------
 	else {
 		timer = TCNT1H | TCNT1L;	//odczytaj wartosc z licznika
 		jestPomiar = 1;				//ustaw flage zakończenia pomiaru
-		PORTB |= (1 << PB2);		//wyłącz diode
+		PORTB |= (1 << dioda);		//wyłącz diode
 	}
 }
 
 ISR(TIMER1_OVF_vect) {
-	PORTB |= (1 << PB2);			//wyłącz diode
+	PORTB |= (1 << dioda);			//wyłącz diode
 	time_out = 1;					//ustaw flage zbyt długiego czasu pomiaru
 }
 
-/*						POWSTAŁE PROBLEMY
- * - Nie działa receiver
- * Nie następuje odczytanie zbocza opadającego sygnalizującego
- * zakończenie pomiaru (kabel ???) W przypadku poruszania kablami wysypuje
- * danymi na UART, jest to kwestia nie łacznia kabelka, czy mechanicznego
- * wywołania zmiany stanu na pinie?
+/*		Działa
+ *
  */
