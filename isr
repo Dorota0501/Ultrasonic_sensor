@@ -1,0 +1,15 @@
+ISR(INT0_vect) {	
+
+	current_state = PIND & 0b00000100;
+
+	if (current_state == 0x04) {
+		TCNT1 = 0;					
+		PORTB &= ~(1 << led);		
+	}
+
+	else {
+		timer = TCNT1H | TCNT1L;	
+		is_measure = 1;				
+		PORTB |= (1 << led);		
+	}
+}
